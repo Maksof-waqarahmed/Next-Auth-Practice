@@ -13,31 +13,33 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { signInSchema } from "@/lib/zodSchema";
 import LoadingButton from "@/components/loading-button";
-import { handleCredentialsSignin, handleGithubSignin } from "@/app/actions/authActions";
-import ErrorMessage from "@/components/error-message";
+import { handleGithubSignin } from "@/app/actions/authActions";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function SignIn() {
-  const [globalError, setGlobalError] = useState<string>("");
+  const router = useRouter();
   const form = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
   });
 
   const onSubmit = async (values: z.infer<typeof signInSchema>) => {
     try {
-      const result = await handleCredentialsSignin(values);
-      if (result?.message) {
-        setGlobalError(result.message);
+      const response = await signIn("credentials", {
+        redirect: false,
+        ...values,
+      });
+
+      if (!response?.ok) {
+        console.error("Error during sign in:", response?.error);
+      } else {
+        router.push("/");
       }
     } catch (error) {
-      console.log("An unexpected error occurred. Please try again.");
+      console.error("An unexpected error occurred:", error);
     }
   };
 
@@ -50,7 +52,6 @@ export default function SignIn() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {globalError && <ErrorMessage error={globalError} />}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <FormField
@@ -98,12 +99,17 @@ export default function SignIn() {
           <span className="text-sm text-gray-500 text-center block my-2">
             or
           </span>
-          <form className="w-full" action={handleGithubSignin}>
-            <Button variant="outline" className="w-full" type="submit">
-              {/* <GitHubLogoIcon className="h-4 w-4 mr-2" /> */}
-              Sign in with GitHub
-            </Button>
-          </form>
+          {/* <form className="w-full" action={handleGithubSignin}> */}
+          <Button
+            variant="outline"
+            className="w-full"
+            type="submit"
+            onClick={handleGithubSignin}
+          >
+            {/* <GitHubLogoIcon className="h-4 w-4 mr-2" /> */}
+            Sign in with GitHub
+          </Button>
+          {/* </form> */}
         </CardContent>
       </Card>
     </div>
