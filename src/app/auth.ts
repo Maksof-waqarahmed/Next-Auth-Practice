@@ -7,9 +7,14 @@ import google from "next-auth/providers/google";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     github({
-      profile(profile){
-        return {id: "some random id is here"}
-      }
+      profile(profile) {
+        return {
+          id: "some random id is here",
+          name: profile.name || "Default Name",
+          email: profile.email || "default-email@domain.com",
+          role: "user",
+        };
+      },
     }),
     google,
     Credentials({
@@ -47,10 +52,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id as string;
         token.role = user.role as string;
+      }
+      if (trigger === "update" && session) {
+        token = { ...token, ...session };
       }
       return token;
     },
@@ -60,11 +68,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as string;
       }
       return session;
-    },
-    async redirect({ url, baseUrl }) {
-      // Prevent unnecessary redirects
-      if (url.startsWith(baseUrl)) return url;
-      return baseUrl;
     },
   },
   pages: {
